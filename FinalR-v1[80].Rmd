@@ -1,0 +1,907 @@
+---
+title: "Compstat FinalProject - Team15"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+date: "2022-12-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+pacman::p_load(pacman,party,psych,rio,tidyverse,ggpubr)
+#Reading the Dataset
+df = read.csv('../../Downloads/Data/ads15.csv')
+
+# adding new column "profit" to DataFrame
+library(dplyr)
+df <- df %>% mutate(profit = df$adrevenue - df$adcost)
+
+df['ROI']<-df$profit/df$adcost
+
+# split into DataFrames based on socialmedia platforms
+library(magrittr)
+
+
+### Splitting Age into 3 categories to evaluate it as a categorical variable
+bin_age <- ceiling(log(max(df$age), 2)) + 1
+df<-df %>% 
+  mutate(
+    # Create categories
+    age_group = dplyr::case_when(
+      age <= 19            ~ "teen",
+      age > 19 & age <= 35 ~ "youngadult",
+      age > 35  ~             "oldadult",
+    ),
+    # Convert to factor
+    age_group = factor(
+      age_group,
+      level = c("teen", "youngadult","oldadult")
+    )
+  )
+fac_df <- df %>% filter(df$socialmedia=="Facebook")
+Inst_df <- df %>% filter(df$socialmedia=="Instagram")
+tk_df <- df %>% filter(df$socialmedia=="TikTok")
+tw_df <- df %>% filter(df$socialmedia=="Twitter")
+y_df <- df %>% filter(df$socialmedia=="YouTube")
+
+#create relative frequency table
+######Q1 a) ####
+### We know that relative frequency means number of values of a particular category divided by total number of values.
+## there are 2 ways to this first using function to apply to all columns but that way continuous value column also gets divided.
+## Second, is to divide each categorical variable separately.
+#approach 2
+
+t1<- table(df$socialmedia)
+t1
+rel_table = prop.table(t1)
+rel_table
+##  Facebook  Instagram     TikTok    Twitter    YouTube 
+##`0.12711864 0.19703390 0.29872881 0.04661017 0.33050847
+rel_freq <- data.frame ("social Media"  = c("Facebook", "Instagram","TikTok","Twitter","YouTube"),
+                  "Frequency" = c("0.12711864", "0.19703390", "0.29872881", "0.04661017", "0.33050847"),
+                  "Count" = c("60","93","141","22","156"))
+rel_freq
+
+# Barplot
+library(ggplot2)
+
+ggplot(df, aes(x = socialmedia),fill=socialmedia) +
+  geom_bar(stat = "count") +
+  scale_fill_manual(values = c("Facebook"="dark blue","Instagram"="purple","TikTok"="black","Twitter"="light blue","YouTube"="red")) +
+  labs(title = "Relative Frequency of Ads on Each Platform", x = "Platform", y = "Count") +
+  theme_dark()
+```
+
+
+```{r}
+
+#### Q1 b) ####
+## Using Goodness-of-Fit test because we are working with proportions and with multiple categories. 
+#We are comparing true proportions with the expected proportions.
+## Also, we have been given the expected proportions and we just calculated the observed proportions above in the relative frequency table.
+
+# H0 = PropFacebook = 0.1,PropInstagram= 0.2,PropTikTok= 0.3, PropTwitter= 0.1, PropYouTube= 0.3
+# H1 = Atleast one of these proportions does not hold
+
+library(stats)
+
+# Specify the observed proportions of ads on each platform
+obs <- c(0.12711864, 0.19703390, 0.29872881, 0.04661017, 0.33050847)
+
+# Specify the expected proportions of ads on each platform
+exp <- c(0.1, 0.2, 0.3, 0.1, 0.3)
+
+# Conduct the Goodness-of-Fit test
+chisq.test(obs, p=exp)
+
+# Observed p-value = 0.99 which is more than 0.05. We fail to reject NULL Hypothesis. 
+#There is no sufficient evidence to conclude that marketing department is not following the strategy.
+```
+
+
+```{r}
+#### Q1 c) ####
+## Variance of each social media platform with respect to age.
+
+cat(varF<- var(df[df$socialmedia == "Facebook", "age"]))
+cat(varI<- var(df[df$socialmedia == "Instagram", "age"]))
+cat(varTk<- var(df[df$socialmedia == "TikTok", "age"]))
+cat(varTw<- var(df[df$socialmedia == "Twitter", "age"]))
+cat(varY<- var(df[df$socialmedia == "YouTube", "age"]))
+
+
+## Standard Deviation of each social media platform with respect to age.
+
+sdF<- sd(df[df$socialmedia == "Facebook", "age"])
+sdI<- sd(df[df$socialmedia == "Instagram", "age"])
+sdTk<- sd(df[df$socialmedia == "TikTok", "age"])
+sdTw<- sd(df[df$socialmedia == "Twitter", "age"])
+sdY<- sd(df[df$socialmedia == "YouTube", "age"])
+sdF
+sdI
+sdTk
+sdTw
+sdY
+
+## Coefficient of Variation of each social media platform with respect to age?
+
+cvF = sd(df[df$socialmedia == "Facebook", "age"])/mean(df[df$socialmedia == "Facebook", "age"])
+cvF
+cvI= sd(df[df$socialmedia == "Instagram", "age"])/mean(df[df$socialmedia == "Instagram", "age"])
+cvI
+cvTk = sd(df[df$socialmedia == "TikTok", "age"])/mean(df[df$socialmedia == "TikTok", "age"])
+cvTk
+cvTw = sd(df[df$socialmedia == "Twitter", "age"])/mean(df[df$socialmedia == "Twitter", "age"])
+cvTw
+cvY = sd(df[df$socialmedia == "YouTube", "age"])/mean(df[df$socialmedia == "YouTube", "age"])
+cvY
+
+
+## skew of Age
+library(moments)
+skew<-skewness(df$age)
+skew
+
+## Plot for distribution of Age variable.
+
+hist(df[df$socialmedia == "Facebook", "age"],xlab ="Age",main = "Facebook and Age")
+hist(df[df$socialmedia == "Instagram", "age"],xlab ="Age",main = "Instagram and Age")
+hist(df[df$socialmedia == "TikTok", "age"],xlab ="Age",main = "TikTok and Age")
+hist(df[df$socialmedia == "Twitter", "age"],xlab ="Age",main = "Twitter and Age")
+hist(df[df$socialmedia == "YouTube", "age"],xlab ="Age",main = "YouTube and Age")
+
+## For YouTube maximum frequency of people are in  25-30 Age group
+## For Twitter maximum frequency of people are in  35-40 Age group
+## For TikTok maximum frequency of people are in 18-20 Age group
+## For Instagram maximum frequency of people are in  25-30 Age group
+## For Facebook maximum frequency of people are in 30-35 Age group
+```
+
+
+```{r}
+#Q2 A ####
+
+sumr_df<-df %>%
+  filter(season=="summer")
+mean(sumr_df$adrevenue)
+
+wntr_df<-df %>%
+  filter(season=="winter")
+
+sprng_df<-df %>%
+  filter(season=="spring")
+
+fll_df<-df %>%
+  filter(season=="fall")
+
+# Calculating Bin Width according to Sturges Formula
+bin_sumr_plt <- ceiling(log(length(sumr_df$profit), 2)) + 1
+bin_fll_plt <- ceiling(log(length(fll_df$profit), 2)) + 1
+bin_sprng_plt <- ceiling(log(length(sprng_df$profit), 2)) + 1
+bin_wntr_plt <- ceiling(log(length(wntr_df$profit), 2)) + 1
+
+
+
+sumr_plt <- ggplot(sumr_df,aes(x=profit)) +
+  ggtitle("Summer") +
+  ylab("Frequency")+
+  geom_histogram(fill="orangered1",bins=bin_sumr_plt) +
+  geom_vline(aes(xintercept = mean(profit)), color = "darkred") +
+  geom_vline(aes(xintercept = median(profit)),color = "darkblue") +
+  geom_vline(aes(xintercept = mean(profit, trim = 0.1)),color = "yellow4") +
+  annotate("text", x = 40, y = 20, label = paste("bar(x)==",round(mean(sumr_df$profit), 3)), parse = T, color = "darkred") +
+  annotate("text", x = 40, y = 25, label = paste("tilde(x)==",round(median(sumr_df$profit), 3)), parse = T, color = "darkblue") +
+  annotate("text", x = 40, y = 30, label = paste("bar(x)[10]==",round(mean(sumr_df$profit,0.1), 3)), parse = T, color = "yellow4")
+
+
+
+
+wntr_plt <- ggplot(wntr_df,aes(x=profit)) +
+  ggtitle("Winter") +
+  ylab("Frequency")+
+  geom_histogram(fill="lightblue",bins=bin_wntr_plt) +
+  geom_vline(aes(xintercept = mean(profit)), color = "darkred") +
+  geom_vline(aes(xintercept = median(profit)),color = "darkblue") +
+  geom_vline(aes(xintercept = mean(profit, trim = 0.1)),color = "yellow4") +
+  annotate("text", x = 20, y = 20, label = paste("bar(x)==",round(mean(wntr_df$profit), 3)), parse = T, color = "darkred") +
+  annotate("text", x = 20, y = 25, label = paste("tilde(x)==",round(median(wntr_df$profit), 3)), parse = T, color = "darkblue") +
+  annotate("text", x = 20, y = 30, label = paste("bar(x)[10]==",round(mean(wntr_df$profit,0.1), 3)), parse = T, color = "yellow4")
+
+
+
+
+sprng_plt <- ggplot(sprng_df,aes(x=profit)) +
+  ggtitle("Spring") +
+  ylab("Frequency")+
+  geom_histogram(fill="pink",bins=bin_sprng_plt) +
+  geom_vline(aes(xintercept = mean(profit)), color = "darkred") +
+  geom_vline(aes(xintercept = median(profit)),color = "darkblue") +
+  geom_vline(aes(xintercept = mean(profit, trim = 0.1)),color = "yellow4") +
+  annotate("text", x = 10, y = 20, label = paste("bar(x)==",round(mean(sprng_df$profit), 3)), parse = T, color = "darkred") +
+  annotate("text", x = 10, y = 25, label = paste("tilde(x)==",round(median(sprng_df$profit), 3)), parse = T, color = "darkblue") +
+  annotate("text", x = 10, y = 30, label = paste("bar(x)[10]==",round(mean(sprng_df$profit,0.1), 3)), parse = T, color = "yellow4")
+
+
+
+
+fll_plt <- ggplot(fll_df,aes(x=profit)) +
+  ggtitle("Fall") +
+  ylab("Frequency")+
+  geom_histogram(fill="brown",bins=bin_fll_plt) +
+  geom_vline(aes(xintercept = mean(profit)), color = "darkred") +
+  geom_vline(aes(xintercept = median(profit)),color = "darkblue") +
+  geom_vline(aes(xintercept = mean(profit, trim = 0.1)),color = "yellow4") +
+  annotate("text", x = 20, y = 20, label = paste("bar(x)==",round(mean(fll_df$profit), 3)), parse = T, color = "darkred") +
+  annotate("text", x = 20, y = 25, label = paste("tilde(x)==",round(median(fll_df$profit), 3)), parse = T, color = "darkblue") +
+  annotate("text", x = 20, y = 30, label = paste("bar(x)[10]==",round(mean(fll_df$profit,0.1), 3)), parse = T, color = "yellow4")
+
+
+sumr_plt
+fll_plt
+wntr_plt
+sprng_plt
+
+```
+
+```{r}
+
+#### Q2 b) ####
+# Checking for the normality at significance level 0.05
+# H0 = sample distribution is normal
+# H1 = sample is not normally distributed
+shapiro.test(df$profit)
+ggqqplot(df$profit)
+hist(df$profit)
+
+shapiro.test(sumr_df$profit)
+ggqqplot(sumr_df$profit)
+hist(sumr_df$profit)
+
+shapiro.test(wntr_df$profit)
+ggqqplot(wntr_df$profit)
+hist(wntr_df$profit)
+## Since sample is not normally distributed we chose to apply non-parametric inference
+## We will use Wilcoxin Rank-Sum test since we don't know if the Two population Variances are equal or not.
+## At alpha significance level 0.05
+## Hypotheses: H0 : μsumr ≤ μwntr vs. H1 : μsumr > μwntr, samples of sizes nsumr = 129 and nwntr = 107
+
+wilcox.test(sumr_df$profit,wntr_df$profit,alternative = "greater",exact = F,correct = F)
+
+## p-value 0.5241 > 0.05 we fail to reject H0.
+## Hence the Profit in winter is Greater than Profit in Summer.
+## We don't have enough evidence to say that CEO is correct.
+```
+
+```{r}
+#### Q2 c) ####
+#In order to test all the 4 season sample at once , we are going to use one way anova. However, in order to conduct   one way anova test ,
+# Three assumptions must hold:
+# • Normality: Each group follows a normal distribution
+# • Equal variances: Population variances for each group are equal 
+# • Independence: Observations are not correlate
+#As we have seen earlier the normality doesn't hold true for summer and winter sample.
+## Since the underlying normality assumptions of ANOVA are violated we cannot go ahead with ANOVA test.
+# We will perform Kruskal-wallis test which is non parametric equivalent of one-way ANOVA.
+kruskal.test(df$profit~df$season)
+
+#H0 : μsumr = μwntr = μsprng = μfll
+#H1 : at least one of the seasons has an average profit that is different from at least one of the other seasons.
+
+# As we can see that the p-value 0.01268 < 0.05 we reject H0. 
+#  there is a significant difference in the avg. Profit across the seasons.
+
+```
+
+
+```{r}
+#### Q3 a) ####
+boxplot(df$profit ~ df$socialmedia,
+        col='steelblue',
+        main='Social Media by Profit',
+        xlab='Social Media',
+        ylab='Profit')
+
+## From the boxplot we can observe that profit from YouTube is higher than other platforms
+## Even though it's not a major difference profit is least in TikTok
+## There are a few significant outliers in YouTube
+```
+
+
+```{r}
+#### Q3 b) ####
+
+library("car")
+fb_data<-df[df$socialmedia == 'Facebook',]
+Insta_data<-df[df$socialmedia == 'Instagram',]
+Tk_data<-df[df$socialmedia == 'TikTok',]
+Tw_data<-df[df$socialmedia == 'Twitter',]
+YT_data<-df[df$socialmedia == 'YouTube',]
+qqPlot(fb_data$profit)
+shapiro.test(fb_data$profit)
+hist(fb_data$profit)
+hist(Insta_data$profit)
+hist(Tk_data$profit)
+hist(Tw_data$profit)
+hist(YT_data$profit)
+qqPlot(Insta_data$profit)
+shapiro.test(Insta_data$profit)
+qqPlot(Tk_data$profit)
+shapiro.test(Tk_data$profit)
+shapiro.test(Tw_data$profit)
+shapiro.test(YT_data$profit)
+## Since the underlying normality assumptions of ANOVA are violated we cannot go ahead with ANOVA test.
+# We will perform Kruskal-wallis test which is non parametric equivalent of one-way ANOVA.
+
+## alpha is 0.05
+#H0 : μfb = μInsta = μTk = μTw = μYT
+#H1 : at least one of the social media platforms has an average profit that is different from at least one of the other social media platforms.
+
+
+kruskal.test(df$profit~df$socialmedia)
+
+## As we can see that the p-value 0.1084 > 0.05 we fail to reject H0. 
+#  there is a no significant difference in the avg. Profit across the social media platforms.
+```
+
+
+```{r}
+#Q4 A####
+#Let's do analysis for new customer
+
+new_df<-df %>%
+  filter(newcustomer=="yes") %>%
+  subset(select= -newcustomer)
+
+old_df<-df %>%
+  filter(newcustomer=="no") %>%
+  subset(select= -newcustomer)
+
+
+ggplot(df,aes(x=profit,y=newcustomer))+
+  geom_boxplot(outlier.colour ="white" ,outlier.shape = 4)+
+  xlab("Profit")+
+  ylab("New Customer Status")+
+  theme_dark()
+
+
+new_plt <- ggplot(new_df,aes(x=profit)) +
+  ggtitle("New Customer") +
+  geom_histogram(fill="brown") +
+  geom_vline(aes(xintercept = mean(profit)), color = "darkred") +
+  geom_vline(aes(xintercept = median(profit)),color = "darkblue") +
+  geom_vline(aes(xintercept = mean(profit, trim = 0.1)),color = "yellow4") +
+  annotate("text", x = 20, y = 20, label = paste("bar(x)==",round(mean(new_df$profit), 3)), parse = T, color = "darkred") +
+  annotate("text", x = 20, y = 25, label = paste("tilde(x)==",round(median(new_df$profit), 3)), parse = T, color = "darkblue") +
+  annotate("text", x = 20, y = 30, label = paste("bar(x)[10]==",round(mean(new_df$profit,0.1), 3)), parse = T, color = "yellow4")
+new_plt
+
+old_plt <- ggplot(old_df,aes(x=profit)) +
+  ggtitle("Old Customer") +
+  geom_histogram(fill="lightblue") +
+  geom_vline(aes(xintercept = mean(profit)), color = "darkred") +
+  geom_vline(aes(xintercept = median(profit)),color = "darkblue") +
+  geom_vline(aes(xintercept = mean(profit, trim = 0.1)),color = "yellow4") +
+  annotate("text", x = 20, y = 20, label = paste("bar(x)==",round(mean(old_df$profit), 3)), parse = T, color = "darkred") +
+  annotate("text", x = 20, y = 25, label = paste("tilde(x)==",round(median(old_df$profit), 3)), parse = T, color = "darkblue") +
+  annotate("text", x = 20, y = 30, label = paste("bar(x)[10]==",round(mean(old_df$profit,0.1), 3)), parse = T, color = "yellow4")
+old_plt
+
+pacman::p_load(pivottabler)
+
+pt <- PivotTable$new()
+pt$addData(df)
+pt$addColumnDataGroups("socialmedia")
+pt$addRowDataGroups("newcustomer")
+pt$defineCalculation(calculationName="TotalCustomers", summariseExpression="n()")
+pt$renderPivot()
+
+#f09433 ,#e6683c ,#dc2743 ,#cc2366 ,#bc1888
+
+#colfunc <- colorRampPalette(c("#f09433" ,"#e6683c" ,"#dc2743" ,"#cc2366" ,"#bc1888"))
+#colfunc(10)
+
+ggplot(df, aes(fill = socialmedia, x = newcustomer)) +
+  geom_bar(position = "stack", stat = "count") +
+  ggtitle("Stacked BarPlot for Social Media and New Customer Status") +
+  xlab("New Customer Status") +
+  ylab("Count of Customers") +
+  #scale_fill_brewer(palette = "Set1") + 
+  scale_fill_manual(values = c("#4267B2","#833AB4","#000000","#1DA1F2","#FF0000")) +
+  theme_dark()
+
+# Let's do chi squared test of Independence 
+# H0: Social media platform is independent to rate of acquiring new customers
+# H1: Social media platform is associated to rate of acquiring new customers
+# alpha = 0.05
+```
+
+```{r}
+group_by(new_df, socialmedia) %>%
+  summarise(
+    count = n(),
+    mean = mean(adcost, na.rm = TRUE),
+    sd = sd(adcost, na.rm = TRUE)
+  )
+```
+```{r}
+#### Q4 b) ####
+
+new_cust_fb<-fb_data[fb_data$newcustomer == 'yes',]
+new_cust_Insta<-Insta_data[Insta_data$newcustomer == 'yes',]
+new_cust_Tk<-Tk_data[Tk_data$newcustomer == 'yes',]
+new_cust_Tw<-Tw_data[Tw_data$newcustomer == 'yes',]
+new_cust_YT<-YT_data[YT_data$newcustomer == 'yes',]
+
+
+shapiro.test(new_cust_fb$adcost)
+shapiro.test(new_cust_Insta$adcost)
+shapiro.test(new_cust_Tk$adcost)
+shapiro.test(new_cust_Tw$adcost)
+shapiro.test(new_cust_YT$adcost)
+
+## Let's check for homoscedasticity
+
+bartlett.test(adcost ~ socialmedia, data=new_df)
+
+##In the above case we see that p=0.002975 < 0.05, thus for bartlett test we reject NULL Hypothesis.
+## therefore homoscedasticity assumption doesn't hold true
+## We will proceed with Kruskal walis because normality , homoscedasticity doesn't hold
+
+#alpha is 0.05
+
+#Ho: new customer's ad cost is same for all social media platform(μfb=μTk=μTw=μInst=μYT)
+#H1: new customer's ad cost is different for at least one platform
+
+kruskal.test(new_df$adcost~new_df$socialmedia)
+
+# Since p-value is less than 0.05 we reject NULL Hypothesis.
+# We can conclude that different rates are associated with aquiring new customers across various social media platforms
+
+#This question is to check for interaction between SocialMedia and NewCustomers
+# This approach is applicable if we are considering count of newcustomers
+
+pt2 <- PivotTable$new()
+pt2$addData(df)
+pt2$addColumnDataGroups("socialmedia")
+pt2$addRowDataGroups("newcustomer")
+pt2$defineCalculation(calculationName="count", summariseExpression="n()")
+pt2$renderPivot()
+
+x <- matrix(c(52,8,70,23,68,73,18,4,86,70),nrow = 2,ncol = 5)
+x
+
+chisq.test(x,correct = F)
+# p value is less than 0.05 therefore we reject Null Hypothesis.
+# This approach concluded->
+#  that different rates are associated with aquiring new customers across various social media platforms
+```
+
+
+```{r}
+library("car")
+qqPlot(new_df$adcost)
+```
+
+```{r}
+#### Q4 c) ####
+n=length(df$newcustomer)
+x=length(new_df$adcost)
+p<-x/n
+#check normality assumptions
+cat("check normality assumptions:\n")
+cat("n*p>=5:",n*p>=5)
+cat("\nn*(1-p)>=5:",n*(1-p)>=5)
+q<-1-p
+z_alpha<-1.96
+CI_upper<-(p+(z_alpha*sqrt(p*q/n)))
+CI_lower<-(p-(z_alpha*sqrt(p*q/n)))
+cat("\nCI:(",CI_lower,",",CI_upper,")")
+cat("We are 95% confident that the interval ( 0.333394 , 0.4208433 ) contains the true population proportion of ads that lead to new customer")
+#approach 2
+prop.test(x,n,correct=FALSE)
+binom.test(x,n,0.5,conf.level = 0.95)
+```
+
+
+```{r}
+#### Q4 d) ####
+
+# alpha is 0.05
+
+#H0:new_cust$profit <= exist_cust$profit
+#H1:new_cust$profit > exist_cust$profit
+#check the variance of the samples
+
+#existing_cust<-df[df$newcustomer == 'no',]
+#ne<-length(existing_cust$newcustomer)
+#nn<-length(new_cust$newcustomer)
+shapiro.test(df$profit)
+shapiro.test(new_df$profit)
+shapiro.test(old_df$profit)
+
+## Data not normally distributed
+
+ggqqplot(new_df$profit)
+hist(new_df$profit)
+
+wilcox.test(new_df$profit,old_df$profit,alternative = "greater",exact = F,correct = F)
+## We fail to reject NULL Hypothesis.
+## We can conclude that we don't have enough evidence to validate the analysts claim that acquiring new customers is more profitable than trying to sell more products to existing customers.
+```
+```{r}
+boxplot(new_df$profit, old_df$profit, names=c("New Customer","Old Customer"))
+
+```
+```{r}
+#since varinace are unequal, we choose Welch's test
+t.test(new_df$profit, old_df$profit,alternative = "greater")
+```
+
+
+```{r}
+#### Q5 a) ####
+mob_df<-df %>%
+  filter(mobile=="mobile") %>%
+  subset(select= -mobile)
+
+comp_df<-df %>%
+  filter(mobile!="mobile") %>%
+  subset(select= -mobile)
+
+bin_mob_plt <- ceiling(log(length(mob_df$profit), 2)) + 1
+bin_com_plt <- ceiling(log(length(comp_df$profit), 2)) + 1
+
+mob_plt <- ggplot(mob_df,aes(x=profit)) +
+  ggtitle("Mobile") +
+  geom_histogram(fill="brown",bins = bin_mob_plt) +
+  geom_vline(aes(xintercept = mean(profit)), color = "darkred") +
+  geom_vline(aes(xintercept = median(profit)),color = "darkblue") +
+  geom_vline(aes(xintercept = mean(profit, trim = 0.1)),color = "yellow4") +
+  annotate("text", x = 20, y = 50, label = paste("bar(x)==",round(mean(mob_df$profit), 3)), parse = T, color = "darkred") +
+  annotate("text", x = 20, y = 60, label = paste("tilde(x)==",round(median(mob_df$profit), 3)), parse = T, color = "darkblue") +
+  annotate("text", x = 20, y = 70, label = paste("bar(x)[10]==",round(mean(mob_df$profit,0.1), 3)), parse = T, color = "yellow4")
+mob_plt
+
+skewness(mob_df$profit)
+skewness(comp_df$profit)
+comp_plt <- ggplot(comp_df,aes(x=profit)) +
+  ggtitle("Computer") +
+  geom_histogram(fill="lightblue",bins=bin_com_plt) +
+  geom_vline(aes(xintercept = mean(profit)), color = "darkred") +
+  geom_vline(aes(xintercept = median(profit)),color = "darkblue") +
+  geom_vline(aes(xintercept = mean(profit, trim = 0.1)),color = "yellow4") +
+  annotate("text", x = 20, y = 50, label = paste("bar(x)==",round(mean(comp_df$profit), 3)), parse = T, color = "darkred") +
+  annotate("text", x = 20, y = 60, label = paste("tilde(x)==",round(median(comp_df$profit), 3)), parse = T, color = "darkblue") +
+  annotate("text", x = 20, y = 70, label = paste("bar(x)[10]==",round(mean(comp_df$profit,0.1), 3)), parse = T, color = "yellow4")
+comp_plt
+```
+
+```{r}
+#### Q5 b) ####
+
+# Checking for interaction between Social media and mobile phone
+
+# we can check for normality first visually by qq plots
+
+ggqqplot(mob_df$profit)
+
+#not quite sure if it's a normal distribution or not.
+# which normality test to use Kolmogorov-Smirnov (K-S) normality test and Shapiro-Wilk’s test?
+# conducting shapiro test at alpha 0.05 with H0:sample distribution is normal.
+shapiro.test(mob_df$profit)
+# p value is less than 0.05 therefore we reject null hypothesis.
+# normality doesn't hold in this scenario.
+# hence we will use Wilcoxon Rank-Sum Test (Mann-Whitney U Test)
+# H0 : The medians of the two populations are identical meaning profit doesn't depend on whether we are on computer or mobile. 
+
+# Conducting Wilcoxon Rank-Sum test at alpha 0.05
+wilcox.test(mob_df$profit,comp_df$profit,exact = F,correct = F)
+# since p value 0.06551 > 0.05 we fail to reject H0.
+# hence Profit doesn't depend on whether we are on mobile or not.
+```
+
+```{r}
+#### Q6 a) ####
+# Create the scatter plot
+ggplot(df, aes(x = age, y =profit)) +
+  ggtitle("Profit vs Age") +
+  geom_point(aes(color = factor(socialmedia)))+ scale_color_manual(values = c(" dark blue", " purple", "black","light blue","red"))
+
+## We can observe that TikTok has young audience of less than 30 and the profit is also less.
+## But tiktok doesn't give huge profits unlike YouTube which has few outliers.
+## YouTube is used by all age groups
+
+```
+
+```{r}
+#### Q6 b) ####
+
+ggplot(df, aes(x = adcost, y = profit)) +
+  ggtitle("Profit vs adcost") +
+  geom_point(aes(color = factor(socialmedia)))+ scale_color_manual(values = c("dark blue", " pink", "black","light blue","red")) + geom_abline()
+
+## We observe Heteroscedasticity from the scatter plot
+## Although it is a weak, there is a positive correlation between profit and adcost
+## we noticed that YouTube's adcost is highest whereas, TikTok's is lowest
+
+```
+
+```{r}
+#### Q6 c) ####
+# alpha is 0.05
+# H0 = rho(Age, Profit) = 0
+# H1 = rho(Age, Profit) !=0
+
+
+cor.test(df$profit, df$age, method = "pearson", alternative = "two.sided", conf.level = 0.95)
+
+# since p-value = 0.01 which is less than 0.05. we can reject null hypothesis.
+# We can say that there is enough evidence to conclude that Age and Profit are correlated.
+```
+
+
+```{r}
+#### Q6 d) ####
+# alpha is 0.05
+
+# H0 = rho(Profit,adcost)=0
+# H1 = rho(Profit,adcost)!=0
+
+cor.test(df$profit, df$adcost, method = "spearman", alternative = "two.sided", conf.level = 0.95,exact=FALSE)
+
+# since p-value = 0.8376 which is more than 0.05 we fail to reject null Hypothesis.
+# there is not enough evidence to conclude that there is a significant correlation between Profit and adcost.
+
+```
+
+```{r}
+#### Q6 e) ####
+
+## we know that simple linear regression hold multiple assumptions
+## Shapiro test to check for normality
+shapiro.test(df$profit)
+## Since y is not normally distributed for x we conclude that linear regression might not be optimal.
+linear_model <- lm(profit ~ adcost, data = df)
+summary(linear_model)
+plot(linear_model)
+## it can be observed that values are not evenly distributed among all values of predictor variable.
+## we observe that R^2 value is 0.02 which means this is not a good fit for the model as expected.
+#### equation->
+#profit = 1.8330 + 0.53(adcost)
+
+## inference -assumptions not followed, observed a very poor performing model
+
+cor(df$profit,df$adcost)
+
+## coefficient of determination
+
+r = cor(df$profit,df$adcost)
+cod = r^2
+print(paste("Coefficient of determination:", cod))
+
+## We can observe from the residual plot there is a clear heteroscedasticity.
+## This is a problem, in part, because the observations with larger errors will have more pull or influence on the fitted model.
+```
+
+
+```{r}
+#### Q6 f) ####
+## Shapiro test to check for normality
+shapiro.test(df$profit)
+
+##assumptions not held
+ggqqplot(df$adcost+df$age)
+
+multi_model <- lm(profit ~ adcost + age, data = df)
+
+plot(multi_model)
+## values not evenly distributed for values of predictor variable.
+summary(multi_model)
+
+
+## inference- Not a good fit since adjusted R^2 = 0.02
+## We can observe from the residual plot there is a clear heteroscedasticity.
+## This is a problem, in part, because the observations with larger errors will have more pull or influence on the fitted model.
+```
+
+```{r}
+#### Q6 g) ##### 
+# H0 = adcost does not improve the fit of the model
+# H1 = adcost improves the fit of the model
+
+fullmodel <- lm(profit ~ adcost + age, data = df)
+
+summary(fullmodel)
+
+reducedmodel <- lm(profit ~ age, data = df)
+summary(reducedmodel)
+
+# Conduct the F-test to compare 2 models one with adcost to see if it improves the linear regression model.
+anova(reducedmodel, fullmodel, test = "F")
+
+
+#the p-value is 0.003042, which is less than alpha = 0.05. 
+#This means that the adcost variable significantly improves the fit of the model, and we can reject the null hypothesis that it does not significantly predict the profit variable. 
+#This suggests that the adcost variable is useful for predicting the profit variable, and should be included in the model.
+
+```
+
+
+```{r }
+#### Q7 ####
+## We know that ANOVA requires data distribution to be normal. We saw from our previous analysis that this assumption in our case is violated. Hence, we chose Kruskal-Walis test, which is a non-parametric equivalent test for ANOVA. The Kruskal Wallis test will tell us if there is a significant difference between groups.
+
+#We have come across multiple approaches to solve Q7 
+#Approach 1:  We conducted Kruskal-Wallis test on profit across each platform
+
+## alpha is 0.05
+#H0 : μfb = μInsta = μTk = μTw = μYT
+#H1 : at least one of the social media platforms has an average profit that is different from at least one of the other social media platforms.
+
+
+kruskal.test(df$profit~df$socialmedia)
+
+## As we can see that the p-value 0.1084 > 0.05 we fail to reject H0. 
+#  there is a no significant difference in the avg. Profit across the social media platforms.
+# Approach 1 suggested that we earn equal profit across each platform hence we planned to divide 100 dollars equally for all the platforms.
+
+## Now approach 2
+
+##### Approach 2 : In this approach we analyzed the effect of each variable on the profit across each platform. We considered each variable individually and performed statistical test to understand their contribution towards profit. 
+#We know that ANOVA requires data distribution to be normal. We saw from our previous analysis that this assumption in our case is violated. Hence, we chose Kruskal-Walis test, which is a non-parametric equivalent test for ANOVA. The Kruskal Wallis test will tell us if there is a significant difference between groups.
+#Season as a factor:
+#To check if season was one of the contributor of the profit we ran Kruskal-Walis test for season for each #platform individually.
+# Three assumptions must hold:
+# • Normality: Each group follows a normal distribution
+# • Equal variances: Population variances for each group are equal 
+# • Independence: Observations are not correlate
+#As we have seen earlier the normality doesn't hold true for summer and winter sample.
+## Since the underlying normality assumptions of ANOVA are violated we cannot go ahead with ANOVA test.
+# We will perform Kruskal-wallis test which is non parametric equivalent of one-way ANOVA.
+kruskal.test(y_df$profit~y_df$season)
+kruskal.test(fac_df$profit~fac_df$season)
+kruskal.test(Inst_df$profit~Inst_df$season)
+kruskal.test(tk_df$profit~tk_df$season)
+kruskal.test(tw_df$profit~tw_df$season)
+
+## Season doesn't affect the profit for individual platforms, so we can eliminate it from our final equation
+
+
+###Since we only had 2 categories under new customer, we conducted Wilcox test on customer variable across each platform. 
+
+#### To check how new_customer or old_customer affect the profits for YouTube
+y_df_new<-y_df %>% filter(newcustomer=="yes") %>% select(profit)
+y_df_old<-y_df %>% filter(newcustomer=="no") %>% select(profit)
+wilcox.test(y_df_new$profit,y_df_old$profit,exact = F,correct = F)
+## We observe that newcustomer feature doesn't affect profit for this platform.
+
+
+## To check how new_customer or old_customer affect the profits for Facebook
+fac_df_new<-fac_df %>% filter(newcustomer=="yes") %>% select(profit)
+fac_df_old<-fac_df %>% filter(newcustomer=="no") %>% select(profit)
+wilcox.test(fac_df_new$profit,fac_df_old$profit,exact = F,correct = F)
+## We observe that newcustomer feature doesn't affect profit for this platform.
+
+### To check how new_customer or old_customer affect the profits for Instagram
+Inst_df_new<-Inst_df %>% filter(newcustomer=="yes") %>% select(profit)
+Inst_df_old<-Inst_df %>% filter(newcustomer=="no") %>% select(profit)
+wilcox.test(Inst_df_new$profit,Inst_df_old$profit,exact = F,correct = F)
+## We observe that newcustomer feature doesn't affect profit for this platform.
+
+## To check how new_customer or old_customer affect the profits for Twitter
+tw_df_new<-tw_df %>% filter(newcustomer=="yes") %>% select(profit)
+tw_df_old<-tw_df %>% filter(newcustomer=="no") %>% select(profit)
+wilcox.test(tw_df_new$profit,tw_df_old$profit,exact = F,correct = F)
+## We observe that newcustomer feature doesn't affect profit for this platform.
+
+## To check how new_customer or old_customer affect the profits for TikTok
+tk_df_new<-tk_df %>% filter(newcustomer=="yes") %>% select(profit)
+tk_df_old<-tk_df %>% filter(newcustomer=="no") %>% select(profit)
+wilcox.test(tk_df_new$profit,tk_df_old$profit,exact = F,correct = F)
+
+###The above results show that none of the platforms were affected by new customer variable.
+
+## To check if age is affecting the profit for each social media platform
+## Since the groups involved were more than two , we conducted Kruskal-Walis test on age group for each      platform.
+## As mentioned above age was divided into 3 categories
+kruskal.test(y_df$profit~y_df$age_group)
+kruskal.test(fac_df$profit~fac_df$age_group)
+kruskal.test(Inst_df$profit~Inst_df$age_group)
+kruskal.test(tk_df$profit~tk_df$age_group)
+kruskal.test(tw_df$profit~tw_df$age_group)
+## We observed that age-group do not affect the profit for each social media platforms.
+
+###Since we only had 2 categories under mobile variable, we conducted Wilcox test on mobile variable across each platform.
+
+## To check if mobile feature affected profit for YouTube.
+y_df_mob<-y_df %>% filter(mobile=="mobile") %>% select(profit)
+y_df_comp<-y_df %>% filter(mobile=="computer") %>% select(profit)
+wilcox.test(y_df_mob$profit,y_df_comp$profit,exact=F,correct=F)
+## We observed that mobile feature significantly affected profit for YouTube.
+
+## To check if mobile feature affected profit for Facebook.
+fac_df_mob<-fac_df %>% filter(mobile=="mobile") %>% select(profit)
+fac_df_comp<-fac_df %>% filter(mobile=="computer") %>% select(profit)
+wilcox.test(fac_df_mob$profit,fac_df_comp$profit,exact=F,correct=F)
+## We observed that mobile feature doesn't have an impact on the profit for Facebook.
+
+## To check if mobile feature affected profit for Instagram.
+Inst_df_mob<-Inst_df %>% filter(mobile=="mobile") %>% select(profit)
+Inst_df_comp<-Inst_df %>% filter(mobile=="computer") %>% select(profit)
+wilcox.test(Inst_df_mob$profit,Inst_df_comp$profit,exact=F,correct=F)
+## We observed that mobile feature doesn't have an impact on the profit for Instagram.
+
+## To check if mobile feature affected profit for Twitter.
+tw_df_mob<-tw_df %>% filter(mobile=="mobile") %>% select(profit)
+tw_df_comp<-tw_df %>% filter(mobile=="computer") %>% select(profit)
+wilcox.test(tw_df_mob$profit,tw_df_comp$profit,exact=F,correct=F)
+## We observed that mobile feature doesn't have an impact on the profit for Twitter.
+
+## To check if mobile feature affected profit for TikTok.
+tk_df_mob<-tk_df %>% filter(mobile=="mobile") %>% select(profit)
+tk_df_comp<-tk_df %>% filter(mobile=="computer") %>% select(profit)
+wilcox.test(tk_df_mob$profit,tk_df_comp$profit,exact=F,correct=F)
+## We observed that mobile feature significantly affected profit for TikTok.
+
+### Once we got to know what all features were having an impact or not on the profit of each social media platform
+## We implemented simple and multiple linear regression models just for those features affecting profit.
+y_lin<-lm(profit~ adrevenue+mobile,data = y_df)
+summary(y_lin)
+Inst_lin<-lm(profit~ adrevenue,data = Inst_df)
+summary(Inst_lin)
+tk_lin<-lm(profit~ adrevenue+mobile,data = tk_df)
+summary(tk_lin)
+tw_lin<-lm(profit~ adrevenue,data = tw_df)
+summary(tw_lin)
+fac_lin<-lm(profit~ adrevenue,data = fac_df)
+summary(fac_lin)
+###Ultimately we got equations for each platform with only those features that affect the profit for those platforms.
+
+# P_youtube = -8.88 + 0.96(adrevenue) - 0.879(mobile)
+# P_ Instagram = -5.315 + 0.93(adrevenue)
+# P_ TikTok = -3.69 + 0.82(adrevenue) + 1.02(mobile)
+# P_Twitter = -2.47 + 0.99(adrevenue)
+# P_Facebook = -4.48 + 0.95(adrevenue)
+
+## Solving the above equation, we came up the division of 100 as below:
+# $41.5 to YouTube
+# $11.7 to TikTok
+# $7.3  to Twitter
+# $17.5 to Facebook
+# $22 to Instagram
+
+
+#### Approach 3
+#### We are considering Return on Investment
+boxplot(df$ROI~df$socialmedia)
+fb_model<-lm(profit~ROI,data=fac_df)
+summary(fb_model)
+Insta_model<-lm(profit~ROI,data=Inst_df)
+summary(Insta_model)
+Tw_model<-lm(profit~ROI,data=tw_df)
+summary(Tw_model)
+Tk_model<-lm(profit~ROI+mobile,data=tk_df)
+summary(Tk_model)
+YT_model<-lm(profit~ROI+mobile,data=y_df)
+summary(YT_model)
+
+## P_fb = 0.0266 + 4.743(ROI)
+## P_Inst = -0.317 + 6.20(ROI)
+## P_Tw = 1.494 + 1.492(ROI)
+## P_Tk = -0.63 + 0.392(ROI) + 3.62(mobile)
+## P_YT = -1.02 + 9.98(ROI) + 0.73(mobile)
+
+# We got the proportions as below->
+## facebook-> 19%
+## Instagram-> 24%
+## Twitter-> 13%
+## TikTok -> 6%
+## YouTube -> 38%
+
+
+```
+
