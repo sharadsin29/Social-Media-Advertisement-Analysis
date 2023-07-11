@@ -35,8 +35,5 @@ To reproduce the analysis, you can run the RMarkdown file in an R environment. M
 ## Limitations
 The project is based on a dataset provided by the company, and the analysis is only as good as the data. The dataset might not include all factors that could influence the effectiveness of an advertisement.
 
-## Project Status
-This project was completed as a final project for the DSCC/CSC 462 course.
-
 
 
